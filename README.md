@@ -1,4 +1,4 @@
-elect_2012
+electua_2012
 ==========
 
-Data acquisition and analysis of Elections to Ukrainian Parliament 2012
+Data acquisition and analysis of the Elections to Ukrainian Parliament 2012
