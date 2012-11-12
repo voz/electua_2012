@@ -112,7 +112,15 @@ echo "Scraping "$what2scrap" from cvk.gov.ua"
 if [ $what2scrap = "dilnutsi" ]; then
     # http://www.cvk.gov.ua/vnd2012/wp029pt001f01=900pid100=%OVK%pf7331=%DILNUTSIA%.html
     address="http://www.cvk.gov.ua/vnd2012/wp029pt001f01=900pid100="
+
+    #Extracting all dilnutsia columns with html tags
     query="//*[@id='content']/table[4]/tbody/tr[position()>1]"
+
+    #Extracting location column
+    # query="//*[@id='content']/table[4]/tbody/tr[position()>1]/td[2]/text()"
+
+    #Extracting location address line
+    # query="//*[@id='content']/table[4]/tbody/tr[position()>1]/td[2]/br/following-sibling::text()"
 
 elif [ $what2scrap = "ovk" ]; then
     # http://www.cvk.gov.ua/vnd2012/wp024pt001f01=900pid100=1pf7331=%OVK%.html
@@ -136,35 +144,95 @@ now=$(date +"%Y_%m_%d")
 outfile=$what2scrap"_"$now".html"
 echo "Writing to: "$outfile
 
-# wget --save-cookies=cvk-cookies http://www.cvk.gov.ua
-#<html>
-#<table>
-#<tbody>
-
-# TODO: store otput in html, xml, json or csv
+# TODO: distribute in xml, json, tsv and litesql
 
 for ovk in {1..225}
 do
 
     if [ $what2scrap = "results" ]; then
         curaddr=$address$ovk".html"
-    else
-        # TODO: Include OVK number in the resulting dataset!!!
+        echo $curaddr
+
+        wget -O - \
+             --user-agent='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_7_5) AppleWebKit/537.4 (KHTML, like Gecko) Chrome/22.0.1229.94 Safari/537.4'\
+             --wait=10 \
+             --random-wait \
+             --header "Referer: www.cvk.gov.ua/" $curaddr | \
+        iconv -f cp1251 -t utf-8 | \
+        tidy -quiet -m -utf8 | \
+        sed 's/&nbsp;//g' | \
+        xpath $query | \
+        sed 's/<td class="td3small" align="center"><b>//g' | \
+        sed 's/<td class="td2">//g' | \
+        sed 's/<td class="td2" align="center">//g' | \
+        sed 's/<span style="color:maroon">//g' | \
+        sed 's/<\/b>//g' | \
+        sed 's/<\/span>//g' | \
+        tr '\n' ' ' | \
+        sed "s/<\/td> <\/tr><tr> />$ovk\\`echo '\t'`/g" | \
+        sed "s/<tr> /$ovk\\`echo '\t'`/g" | \
+        sed 's/<\/td> <\/tr>//g' | \
+        sed "s/<\/td> /\\`echo '\t'`/g" | \
+        tr '>' '\n' >> $outfile
+
+    elif [ $what2scrap = "dilnutsi" ]; then
         getRegionByOvk $ovk
         curaddr=$address$region"pf7331="$ovk".html"
+        echo $curaddr
+
+        wget -O - \
+             --user-agent='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_7_5) AppleWebKit/537.4 (KHTML, like Gecko) Chrome/22.0.1229.94 Safari/537.4'\
+             --wait=10 \
+             --random-wait \
+             --header "Referer: www.cvk.gov.ua/" $curaddr | \
+        iconv -f cp1251 -t utf-8 | \
+        tidy -quiet -m -utf8 | \
+        sed 's/&nbsp;//g' | \
+        # sed "s/<\/b>/\\`echo '\n<\/b>'`/g" | \
+        # sed "s/<\/td>/\\`echo '\n<\/td>'`/g" | \
+        # sed "s/<\/br>/\\`echo '\t'`/g" | \
+        xpath $query | \
+        sed "s/<b>/$ovk\\`echo '\t'`/g" | \
+        sed 's/<td align="center" class="td3">//g' | \
+        sed 's/<td class="td2">//g' | \
+        sed "s/<br \/>/<TAB>/g" | \
+        sed "s/<\/b><\/td>/<TAB>/g" | \
+        tr '\n' ' ' | \
+        sed "s/<\/td> <\/tr><tr> />/g" | \
+        sed "s/<\/td> <\/tr> //g" | \
+        sed "s/<tr> //g" | \
+        sed "s/<\/td>/<TAB>/g" | \
+        sed "s/<TAB> /\\`echo '\t'`/g" | \
+        tr '>' '\n' >> $outfile
+
+    elif [ $what2scrap = "ovk" ]; then
+        getRegionByOvk $ovk
+        curaddr=$address$region"pf7331="$ovk".html"
+        echo $curaddr
+
+        wget -O - \
+             --user-agent='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_7_5) AppleWebKit/537.4 (KHTML, like Gecko) Chrome/22.0.1229.94 Safari/537.4'\
+             --wait=10 \
+             --random-wait \
+             --header "Referer: www.cvk.gov.ua/" $curaddr | \
+        iconv -f cp1251 -t utf-8 | \
+        tidy -quiet -m -utf8 | \
+        sed 's/&nbsp;//g' | \
+        xpath $query | \
+        sed '/<td class="td10">/d' | \
+        sed '/<td width="50%" class="td10">/d' | \
+        sed '/<\/tr><tr>/d' | \
+        sed 's/<\/td>//g' | \
+        sed 's/<td class="td2">/<TAB>/g' | \
+        tr '\n' ' ' | \
+        sed 's/<tr> <td width="50%" class="td2">/<BEGIN>/g' | \
+        sed "s/<BEGIN>/$ovk\\`echo '\t'`/g" | \
+        sed 's/<\/b>//g' | \
+        sed "s/ <TAB>/\\`echo '\t'`/g" | \
+        sed 's/<b>//g' | \
+        sed 's/ <\/tr> //g' >> $outfile
+
     fi
-
-    echo $curaddr
-
-    wget -O - \
-         --user-agent='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_7_5) AppleWebKit/537.4 (KHTML, like Gecko) Chrome/22.0.1229.94 Safari/537.4'\
-         --wait=10 \
-         --random-wait \
-         --header "Referer: www.cvk.gov.ua/" $curaddr | \
-    iconv -f cp1251 -t utf-8 | \
-    tidy -quiet -m -utf8 | \
-    sed 's/&nbsp;//g' | \
-    xpath $query >> $outfile
 
     sleep 8s
 done
