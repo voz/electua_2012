@@ -1,7 +1,7 @@
 #!/bin/bash
 #
-# cvkscrape.sh
-# 04.11.2012
+# scrapecvk.sh
+# 12.11.2012
 # Andrii@Vozniuk.com
 # 
 # Scrapes cvk.gov.ua
