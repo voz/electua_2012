@@ -1,7 +1,7 @@
 #!/bin/bash
 #
-# scrapecvk.sh
-# 12.11.2012
+# cvkscrape.sh
+# 04.11.2012
 # Andrii@Vozniuk.com
 # 
 # Scrapes cvk.gov.ua
@@ -145,6 +145,7 @@ outfile=$what2scrap"_"$now".html"
 echo "Writing to: "$outfile
 
 # TODO: distribute in xml, json, tsv and litesql
+# 225 Districts
 
 for ovk in {1..225}
 do
@@ -157,6 +158,7 @@ do
              --user-agent='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_7_5) AppleWebKit/537.4 (KHTML, like Gecko) Chrome/22.0.1229.94 Safari/537.4'\
              --wait=10 \
              --random-wait \
+             --retry-connrefused \
              --header "Referer: www.cvk.gov.ua/" $curaddr | \
         iconv -f cp1251 -t utf-8 | \
         tidy -quiet -m -utf8 | \
@@ -166,14 +168,16 @@ do
         sed 's/<td class="td2">//g' | \
         sed 's/<td class="td2" align="center">//g' | \
         sed 's/<span style="color:maroon">//g' | \
-        sed 's/<\/b>//g' | \
+        sed "s/<\/b><br \/>/\\`echo '\t'`/g" | \
+        sed "s/<\/b>/\\`echo '\tДійсне'`/g" | \
         sed 's/<\/span>//g' | \
         tr '\n' ' ' | \
         sed "s/<\/td> <\/tr><tr> />$ovk\\`echo '\t'`/g" | \
         sed "s/<tr> /$ovk\\`echo '\t'`/g" | \
-        sed 's/<\/td> <\/tr>//g' | \
+        sed 's/<\/td> <\/tr> //g' | \
         sed "s/<\/td> /\\`echo '\t'`/g" | \
-        tr '>' '\n' >> $outfile
+        tr '>' '\n' | \
+        sed 's/ Н/Н/g' >> $outfile
 
     elif [ $what2scrap = "dilnutsi" ]; then
         getRegionByOvk $ovk
